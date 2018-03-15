@@ -31,7 +31,7 @@ let parse s =
 
 (* Interpret an expression *)
 let inf (e:string) : string =
-  e |> parse |> infer_type 
+  e |> parse |> infer_type
 
 let test (n:int) : string =
-  Examples.expr n |> parse |> infer_type 
+  Examples.expr n |> parse |> infer_type

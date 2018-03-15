@@ -1,7 +1,7 @@
 (* The type of the abstract syntax tree (AST). *)
 
 type expr =
-  | Unit 
+  | Unit
   | Var of string
   | Int of int
   | Add of expr*expr
