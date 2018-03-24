@@ -20,8 +20,8 @@ let apply_to_env set env = ()
 
 let string_of_subs set =
   Hashtbl.fold (fun k v acc ->
-    k ^ " -> " ^ Ast.string_of_texpr(v) ^ ", " ^ acc
-  ) set ""
+      k ^ " -> " ^ Ast.string_of_texpr(v) ^ ", " ^ acc
+    ) set ""
 
 let domain set =
   Hashtbl.fold (fun k v acc -> k :: acc) set []

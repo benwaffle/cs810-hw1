@@ -52,7 +52,7 @@ let rec string_of_expr e =
   | IsZero(e) -> "Zero?("^string_of_expr e ^")"
   | ITE(e1,e2,e3) -> "IfThenElse("^string_of_expr e1^"," ^ string_of_expr e2^"," ^ string_of_expr e3  ^")"
   | Letrec(tRes,x,param,tPara, def,body) -> "Letrec("^string_of_texpr
-  tRes^" "^x^","^param^":"^string_of_texpr tRes ^","^ string_of_expr def ^","^ string_of_expr body ^")"
+                                              tRes^" "^x^","^param^":"^string_of_texpr tRes ^","^ string_of_expr def ^","^ string_of_expr body ^")"
   | LetrecUntyped(x,param,def,body) -> "Letrec("^x^","^param^","^ string_of_expr def ^","^ string_of_expr body ^")"
   | Set(x,rhs) -> "Set("^x^","^string_of_expr rhs^")"
   | BeginEnd(es) -> "BeginEnd(" ^ List.fold_left (fun x y -> x^","^y)
@@ -71,7 +71,7 @@ let string_of_prog (AProg e)  = string_of_expr e
 module SetStr = Set.Make(struct
     type t = string
     let compare = compare
-end)
+  end)
 
 let rec fv = function
   | Unit -> SetStr.empty
@@ -96,7 +96,7 @@ let rec fv = function
     SetStr.union (SetStr.remove x (fv def)) (SetStr.remove x (fv body))
   | Set(x,rhs) -> SetStr.add x (fv rhs)
   | BeginEnd(es) ->  List.fold_left (fun s e -> SetStr.union s (fv e))
-                      SetStr.empty  es
+                       SetStr.empty  es
 
 let fv_of_prog (AProg e) = fv e
 
