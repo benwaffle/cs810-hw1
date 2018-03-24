@@ -18,7 +18,7 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
 
 let infer_type (AProg e) =
   match infer' e 0 with
-  | OK (_, tj) -> string_of_typing_judgement tj
+  | OK (_, tj) -> "rip" (*string_of_typing_judgement tj*)
   | Error s -> "Error! "^ s
 
 

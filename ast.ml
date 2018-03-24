@@ -68,7 +68,10 @@ and string_of_texpr = function
 
 let string_of_prog (AProg e)  = string_of_expr e
 
-module SetStr = Set.Make(struct type t = string let compare = compare end)
+module SetStr = Set.Make(struct
+    type t = string
+    let compare = compare
+end)
 
 let rec fv = function
   | Unit -> SetStr.empty
