@@ -13,10 +13,7 @@ let rec apply_to_texpr set = function
   | VarType s -> (
     match lookup set s with
     | Some t -> t
-    | None -> begin
-      print_string ("none " ^ s ^ "\n");
-      VarType s
-    end
+    | None -> VarType s
   )
   | FuncType (arg, ret) -> FuncType (apply_to_texpr set arg, apply_to_texpr set ret)
   | RefType t -> RefType (apply_to_texpr set t)
