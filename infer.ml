@@ -7,10 +7,9 @@ type 'a error = OK of 'a | Error of string
 
 type typing_judgement = subst*expr*texpr
 
-let report t1 t2 =
-  Error (Printf.sprintf "cannot unify %s and %s" (string_of_texpr t1) (string_of_texpr t2))
-
 let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
+  let report t1 t2 =
+    Error (Printf.sprintf "cannot unify %s and %s" (string_of_texpr t1) (string_of_texpr t2)) in
   match e with
   | Unit -> OK (n, (create (), e, UnitType))
   | Int x -> OK (n, (create (), e, IntType))
