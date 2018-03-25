@@ -47,6 +47,6 @@ let () =
   printf "=============\n";
 
   unify [
-    VarType "x",
-    VarType "x"
+    IntType,
+    BoolType
   ]
