@@ -16,7 +16,7 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
 
 let string_of_typing_judgement = function
 | (tenv, expr, texpr) ->
-  (string_of_subs tenv) ^ "⊢" ^ (string_of_expr expr) ^ "::" ^ (string_of_texpr texpr)
+  (string_of_subs tenv) ^ "⊢" ^ (string_of_expr expr) ^ ":" ^ (string_of_texpr texpr)
 
 
 let infer_type (AProg e) =
