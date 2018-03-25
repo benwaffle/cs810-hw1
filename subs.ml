@@ -33,7 +33,7 @@ let apply_to_env set env =
   (* TODO make it evalute VarTypes in env as well *)
   Hashtbl.iter (fun k v ->
       (* add from env to set *)
-      Printf.printf "adding to %s: %s/%s\n" (string_of_subs set) (string_of_texpr v) k;
+      (* Printf.printf "adding to %s: %s/%s\n" (string_of_subs set) (string_of_texpr v) k; *)
       match lookup set k with
       | Some x ->
         if x != v
