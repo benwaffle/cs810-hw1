@@ -7,32 +7,39 @@ type 'a error = OK of 'a | Error of string
 
 type typing_judgement = subst*expr*texpr
 
+let report t1 t2 =
+  Error (Printf.sprintf "cannot unify %s and %s" (string_of_texpr t1) (string_of_texpr t2))
 
 let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
   match e with
   | Unit -> OK (n, (create (), e, UnitType))
   | Int x -> OK (n, (create (), e, IntType))
   | Var s -> OK (n+1,
-    let tv = "v_" ^ string_of_int (n+1) in
+    let tv = "v" ^ string_of_int (n+1) in
     let tc = create () in
     extend tc s @@ VarType (tv);
     (tc, e, VarType (tv))
   )
-  | Add (e1, e2) | Sub(e1, e2) ->
+  | Add (e1, e2) | Sub(e1, e2) | Mul(e1, e2) | Div(e1, e2) ->
     (
       match infer' e1 n with
       | OK (n1, (s1, _, t1)) ->
         (match infer' e2 n1 with
         | OK (n2, (s2, _, t2)) -> 
-          Printf.printf "e1: %s |- %s : %s\n" (string_of_subs s1) (string_of_expr e1) (string_of_texpr t1);
-          Printf.printf "e2: %s |- %s : %s\n" (string_of_subs s2) (string_of_expr e2) (string_of_texpr t2);
           (* compat(s1, s2) *)
           (match mgu [(t1, IntType) ; (t2, IntType)] with
           | UOk s -> OK (n2, (join [s1;s2;s], e, IntType))
-          | UError (t1, t2) -> Error (Printf.sprintf "cannot unify %s and %s" (string_of_texpr t1) (string_of_texpr t2)))
+          | UError (t1, t2) -> report t1 t2)
         | Error s -> Error s)
       | Error s -> Error s
     )
+  | IsZero e1 ->
+    (match infer' e1 n with
+    | OK (n1, (s1, _, t1)) ->
+      (match mgu [(t1, IntType)] with
+      | UOk s -> OK (n1, (s1, e, BoolType))
+      | UError (t1, t2) -> report t1 t2)
+    | Error s -> Error s)
   | _ -> failwith @@ "infer': undefined for " ^ string_of_expr e
 
 

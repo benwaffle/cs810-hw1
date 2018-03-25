@@ -8,10 +8,10 @@ let unify xs =
   | UOk s -> printf "%s\n" @@ string_of_subs s
 
 let () =
-  (* for i = 1 to 24 do
+  for i = 1 to 24 do
     printf "====================\nTest: %s\nType: %s\n" (Examples.expr i) (Infer.test i)
   done
-  ;; *)
+  ;;
 
   (* let s = create () in
   extend s "t" @@ FuncType(VarType("u"), BoolType);
