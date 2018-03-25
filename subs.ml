@@ -9,8 +9,8 @@ let lookup = Hashtbl.find_opt
 let string_of_subs set =
   "{" ^
   (Hashtbl.fold (fun k v acc ->
-      Ast.string_of_texpr(v) ^ "/" ^ k ^ ", " ^ acc
-  ) set "")
+       Ast.string_of_texpr(v) ^ "/" ^ k ^ ", " ^ acc
+     ) set "")
   ^ "}"
 
 let rec apply_to_texpr set = function
@@ -18,27 +18,27 @@ let rec apply_to_texpr set = function
   | BoolType -> BoolType
   | UnitType -> UnitType
   | VarType s -> (
-    match lookup set s with
-    | Some t -> t
-    | None -> VarType s
-  )
+      match lookup set s with
+      | Some t -> t
+      | None -> VarType s
+    )
   | FuncType (arg, ret) -> FuncType (apply_to_texpr set arg, apply_to_texpr set ret)
   | RefType t -> RefType (apply_to_texpr set t)
 
 let apply_to_env set env =
   Hashtbl.iter (fun k v ->
-    (* evaluate VarType's  *)
-    Hashtbl.replace set k (apply_to_texpr env v)
-  ) set;
+      (* evaluate VarTypes  *)
+      Hashtbl.replace set k (apply_to_texpr env v)
+    ) set;
   Hashtbl.iter (fun k v ->
-    (* add from env to set *)
-    Printf.printf "adding to %s: %s/%s\n" (string_of_subs set) (string_of_texpr v) k;
-    match lookup set k with
-    | Some x ->
-      if x != v then failwith (Printf.sprintf "can't set %s = %s, it's already %s" k (string_of_texpr v) (string_of_texpr x))
-      else ()
-    | None -> Hashtbl.add set k v
-  ) env
+      (* add from env to set *)
+      Printf.printf "adding to %s: %s/%s\n" (string_of_subs set) (string_of_texpr v) k;
+      match lookup set k with
+      | Some x ->
+        if x != v
+        then failwith (Printf.sprintf "can't set %s = %s, it's already %s" k (string_of_texpr v) (string_of_texpr x))
+      | None -> Hashtbl.add set k v
+    ) env
 
 let extend set var texpr =
   let ht = create() in
