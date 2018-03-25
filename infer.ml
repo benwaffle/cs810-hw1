@@ -37,7 +37,7 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
     (match infer' e1 n with
     | OK (n1, (s1, _, t1)) ->
       (match mgu [(t1, IntType)] with
-      | UOk s -> OK (n1, (s1, e, BoolType))
+      | UOk s -> OK (n1, (join [s1;s], e, BoolType))
       | UError (t1, t2) -> report t1 t2)
     | Error s -> Error s)
   | _ -> failwith @@ "infer': undefined for " ^ string_of_expr e
