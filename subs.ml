@@ -6,6 +6,13 @@ let create () = Hashtbl.create 10
 
 let lookup = Hashtbl.find_opt
 
+let string_of_subs set =
+  "{" ^
+  (Hashtbl.fold (fun k v acc ->
+      Ast.string_of_texpr(v) ^ "/" ^ k ^ ", " ^ acc
+  ) set "")
+  ^ "}"
+
 let rec apply_to_texpr set = function
   | IntType -> IntType
   | BoolType -> BoolType
@@ -25,7 +32,12 @@ let apply_to_env set env =
   ) set;
   Hashtbl.iter (fun k v ->
     (* add from env to set *)
-    Hashtbl.add set k v
+    Printf.printf "adding to %s: %s/%s\n" (string_of_subs set) (string_of_texpr v) k;
+    match lookup set k with
+    | Some x ->
+      if x != v then failwith (Printf.sprintf "can't set %s = %s, it's already %s" k (string_of_texpr v) (string_of_texpr x))
+      else ()
+    | None -> Hashtbl.add set k v
   ) env
 
 let extend set var texpr =
@@ -38,23 +50,14 @@ let remove = Hashtbl.remove
 let apply_to_expr set = function
   | x -> x
 
-let string_of_subs set =
-  "{" ^
-  (Hashtbl.fold (fun k v acc ->
-      Ast.string_of_texpr(v) ^ "/" ^ k ^ ", " ^ acc
-  ) set "")
-  ^ "}"
-
 let domain set =
   Hashtbl.fold (fun k v acc -> k :: acc) set []
 
 (* compose *)
-let rec join sets : subst =
-  let combine a b : subst = begin
-    Hashtbl.fold (fun k v acc -> Hashtbl.add a k v) b ();
-    a
-  end in
-  match sets with
+let rec join = function
   | [] -> create ()
   | [x] -> x
-  | x :: xs -> combine x (join xs)
+  | x :: xs ->
+    let res = Hashtbl.copy x in
+    apply_to_env res (join xs);
+    res
