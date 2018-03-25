@@ -30,6 +30,7 @@ let apply_to_env set env =
       (* evaluate VarTypes  *)
       Hashtbl.replace set k (apply_to_texpr env v)
     ) set;
+  (* TODO make it evalute VarTypes in env as well *)
   Hashtbl.iter (fun k v ->
       (* add from env to set *)
       Printf.printf "adding to %s: %s/%s\n" (string_of_subs set) (string_of_texpr v) k;
