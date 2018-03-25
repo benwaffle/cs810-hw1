@@ -18,7 +18,7 @@ let rec apply_to_texpr set = function
   | FuncType (arg, ret) -> FuncType (apply_to_texpr set arg, apply_to_texpr set ret)
   | RefType t -> RefType (apply_to_texpr set t)
 
-let apply_to_env set env = begin
+let apply_to_env set env =
   Hashtbl.iter (fun k v ->
     (* evaluate VarType's  *)
     Hashtbl.replace set k (apply_to_texpr env v)
@@ -26,17 +26,12 @@ let apply_to_env set env = begin
   Hashtbl.iter (fun k v ->
     (* add from env to set *)
     Hashtbl.add set k v
-  ) env;
-  ()
-end
+  ) env
 
 let extend set var texpr =
-  let ht = create() in begin
-    (* Hashtbl.add set var texpr; (* add to subst *)  *)
-    Hashtbl.add ht var texpr; (* create tmp hashtbl so we can apply new var *)
-    apply_to_env set ht;
-    ()
-  end
+  let ht = create() in
+  Hashtbl.add ht var texpr; (* create tmp hashtbl so we can apply new var *)
+  apply_to_env set ht
 
 let remove = Hashtbl.remove
 
