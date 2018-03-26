@@ -54,6 +54,14 @@ let apply_to_expr set = function
 let domain set =
   Hashtbl.fold (fun k v acc -> k :: acc) set []
 
+let compat (a:subst) (b:subst) : bool =
+  let bd = domain b in
+  List.fold_left (fun acc k ->
+    if List.mem k bd
+    then acc && (Hashtbl.find a k = Hashtbl.find b k)
+    else acc
+  ) true (domain a)
+
 (* compose *)
 let rec join = function
   | [] -> create ()
