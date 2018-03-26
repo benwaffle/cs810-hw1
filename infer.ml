@@ -55,6 +55,14 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
         | UError (t1, t2) -> report t1 t2)
       | Error s -> Error s)
     | Error s -> Error s)
+  | ProcUntyped (arg, body) ->
+    (match infer' body n with
+    | OK (n1, (s1, _, t1)) ->
+        let arg = (match lookup s1 arg with
+                  | None -> VarType arg
+                  | Some t -> t) in
+        OK (n1, (s1, e, FuncType (arg, t1)))
+    | Error s -> Error s)
   | _ -> failwith @@ "infer': undefined for " ^ string_of_expr e
 
 
