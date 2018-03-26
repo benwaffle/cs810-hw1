@@ -38,6 +38,6 @@ let mgu xs =
         UError (t1, t2)
       | (x, VarType (y)) -> (* swap *)
         helper sub @@ (t2, t1) :: xs
-      | (x, y) -> (* fail, e.g. N = B *)
-        UError (x, y)
+      | _ -> (* fail, e.g. N = B *)
+        UError (t1, t2)
   in helper (create ()) xs

@@ -14,14 +14,13 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
   | Unit -> OK (n, (create (), e, UnitType))
   | Int x -> OK (n, (create (), e, IntType))
   | Var s -> OK (n+1,
-    let tv = "v" ^ string_of_int (n+1) in
+    let tv = "v" ^ string_of_int n in
     let tc = create () in
     extend tc s @@ VarType (tv);
     (tc, e, VarType (tv))
   )
   | Add (e1, e2) | Sub(e1, e2) | Mul(e1, e2) | Div(e1, e2) ->
-    (
-      match infer' e1 n with
+    (match infer' e1 n with
       | OK (n1, (s1, _, t1)) ->
         (match infer' e2 n1 with
         | OK (n2, (s2, _, t2)) -> 
@@ -30,14 +29,25 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
           | UOk s -> OK (n2, (join [s1;s2;s], e, IntType))
           | UError (t1, t2) -> report t1 t2)
         | Error s -> Error s)
-      | Error s -> Error s
-    )
+      | Error s -> Error s)
   | IsZero e1 ->
     (match infer' e1 n with
     | OK (n1, (s1, _, t1)) ->
       (match mgu [(t1, IntType)] with
       | UOk s -> OK (n1, (join [s1;s], e, BoolType))
       | UError (t1, t2) -> report t1 t2)
+    | Error s -> Error s)
+  | App (f, x) ->
+    (match infer' f n with
+    | OK (n1, (s1, _, t1)) ->
+      (match infer' x n1 with
+      | OK (n2, (s2, _, t2)) ->
+        let arg = VarType ("v" ^ string_of_int n2) in
+        let ret = VarType ("v" ^ string_of_int (n2+1)) in
+        (match mgu [(t1, FuncType (arg, ret)); (t2, arg)] with
+        | UOk s -> OK (n2+2, (join [s1;s2;s], e, apply_to_texpr s ret))
+        | UError (t1, t2) -> report t1 t2)
+      | Error s -> Error s)
     | Error s -> Error s)
   | _ -> failwith @@ "infer': undefined for " ^ string_of_expr e
 

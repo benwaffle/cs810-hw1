@@ -49,4 +49,12 @@ let () =
   unify [
     IntType,
     BoolType
+  ];
+
+  printf "=============\n";
+
+  unify [
+    (VarType "v0", IntType);
+    (VarType "v0", VarType "v1");
+    (VarType "v1", BoolType)
   ]
