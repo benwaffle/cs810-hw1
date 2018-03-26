@@ -25,7 +25,6 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
       | OK (n1, (s1, _, t1)) ->
         (match infer' e2 n1 with
         | OK (n2, (s2, _, t2)) -> 
-          (* compat(s1, s2) *)
           (match mgu [(t1, IntType) ; (t2, IntType)] with
           | UOk s ->
               if compat s1 s2
@@ -62,6 +61,22 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
                   | None -> VarType arg
                   | Some t -> t) in
         OK (n1, (s1, e, FuncType (arg, t1)))
+    | Error s -> Error s)
+  | Let (var, exp, body) ->
+    printf "let %s = %s in %s\n" var (string_of_expr exp) (string_of_expr body);
+    (match infer' body n with
+    | OK (n1, (s1, _, t1)) ->
+      (match infer' exp n1 with
+      | OK (n2, (s2, _, t2)) ->
+        (match lookup s1 var with
+        | None -> OK (n2, (join [s1;s2], e, t2))
+        | Some t -> (match mgu [(t, t2)] with
+                    | UOk s ->
+                      if compat s1 s2
+                      then OK (n2, (join [s1;s2;s], e, t2))
+                      else Error (sprintf "compat(%s, %s) failed" (string_of_subs s1) (string_of_subs s2))
+                    | UError (t1, t2) -> report t1 t2))
+      | Error s -> Error s)
     | Error s -> Error s)
   | _ -> failwith @@ "infer': undefined for " ^ string_of_expr e
 
