@@ -23,6 +23,10 @@ let compat (xs : subst list) : (texpr * texpr) list =
     ) xs
   ) xs
 
+let apply_to_env2 s e =
+  apply_to_env s e;
+  e
+
 let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
   let report t1 t2 =
     Error (Printf.sprintf "cannot unify %s and %s" (string_of_texpr t1) (string_of_texpr t2)) in
@@ -42,10 +46,10 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
         | OK (n2, (s2, _, t2)) -> 
           printf "L= %s\n" @@ string_of_typing_judgement (s1, e1, t1);
           printf "R= %s\n" @@ string_of_typing_judgement (s2, e2, t2);
-          (match mgu @@ List.append [(t1, IntType) ; (t2, IntType)] (compat [s1;s2]) with
+          (match mgu @@ List.append [(t1, IntType);(t2, IntType)] (compat [s1;s2]) with
           | UOk s ->
               printf "MGU = S %s\n" (string_of_subs s);
-              OK (n2, (join [s1;s2;s], e, IntType))
+              OK (n2, (join @@ List.map (apply_to_env2 s) [s1;s2], e, IntType))
           | UError (t1, t2) -> report t1 t2)
         | Error s -> Error s)
       | Error s -> Error s)
@@ -53,7 +57,9 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
     (match infer' e1 n with
     | OK (n1, (s1, _, t1)) ->
       (match mgu [(t1, IntType)] with
-      | UOk s -> OK (n1, (join [s1;s], e, BoolType))
+      | UOk s ->
+        apply_to_env s s1;
+        OK (n1, (s1, e, BoolType))
       | UError (t1, t2) -> report t1 t2)
     | Error s -> Error s)
   | App (f, x) ->
@@ -67,7 +73,7 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
         (match mgu @@ (t1, FuncType (t2, ret)) :: compat [s1;s2] with
         | UOk s ->
               printf "MGU = S %s\n" (string_of_subs s);
-            OK (n2+2, (join [s1;s2;s], e, apply_to_texpr s ret))
+            OK (n2+2, (join @@ List.map (apply_to_env2 s) [s1;s2], e, apply_to_texpr s ret))
         | UError (t1, t2) -> report t1 t2)
       | Error s -> Error s)
     | Error s -> Error s)

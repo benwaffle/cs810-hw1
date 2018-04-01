@@ -39,7 +39,7 @@ let extend set var texpr =
 
 let apply_to_env set env =
   Hashtbl.iter (fun k v ->
-    Hashtbl.replace set k (apply_to_texpr set v)
+    Hashtbl.replace env k (apply_to_texpr set v)
   ) env
 
 let remove = Hashtbl.remove
@@ -65,10 +65,12 @@ let rec apply_to_expr set e =
 let domain set =
   Hashtbl.fold (fun k v acc -> k :: acc) set []
 
-let rec join = function
-  | [] -> create ()
-  | [x] -> x
-  | x :: xs ->
-    let res = Hashtbl.copy x in
-    apply_to_env res (join xs);
-    res
+let join (xs: subst list) : subst =
+  List.fold_left (fun acc sub ->
+    Hashtbl.iter (fun k v ->
+      match lookup sub k with
+      | Some x when x != v -> failwith @@ Printf.sprintf "join failed; %s != %s" (string_of_texpr x) (string_of_texpr v)
+      | _ -> extend acc k v
+    ) sub;
+    acc
+  ) (create()) xs
