@@ -8,6 +8,21 @@ type 'a error = OK of 'a | Error of string
 
 type typing_judgement = subst*expr*texpr
 
+let string_of_typing_judgement = function
+| (tenv, expr, texpr) ->
+  (string_of_subs tenv) ^ " ⊢ " ^ (string_of_expr expr) ^ " : " ^ (string_of_texpr texpr)
+
+let compat (xs : subst list) : (texpr * texpr) list =
+  List.flatten @@ List.flatten @@ List.map (fun s1 ->
+    List.map (fun s2 ->
+      List.fold_left (fun acc var ->
+        match lookup s2 var with
+        | Some x -> (Hashtbl.find s1 var, x) :: acc
+        | None -> acc
+      ) [] (domain s1)
+    ) xs
+  ) xs
+
 let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
   let report t1 t2 =
     Error (Printf.sprintf "cannot unify %s and %s" (string_of_texpr t1) (string_of_texpr t2)) in
@@ -15,21 +30,22 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
   | Unit -> OK (n, (create (), e, UnitType))
   | Int x -> OK (n, (create (), e, IntType))
   | Var s -> OK (n+1,
-    let tv = "v" ^ string_of_int n in
+    let tv = VarType("v" ^ string_of_int n) in
     let tc = create () in
-    extend tc s @@ VarType (tv);
-    (tc, e, VarType (tv))
+    extend tc s tv;
+    (tc, e, tv)
   )
   | Add (e1, e2) | Sub(e1, e2) | Mul(e1, e2) | Div(e1, e2) ->
     (match infer' e1 n with
       | OK (n1, (s1, _, t1)) ->
         (match infer' e2 n1 with
         | OK (n2, (s2, _, t2)) -> 
-          (match mgu [(t1, IntType) ; (t2, IntType)] with
+          printf "L= %s\n" @@ string_of_typing_judgement (s1, e1, t1);
+          printf "R= %s\n" @@ string_of_typing_judgement (s2, e2, t2);
+          (match mgu @@ List.append [(t1, IntType) ; (t2, IntType)] (compat [s1;s2]) with
           | UOk s ->
-              if compat s1 s2
-              then OK (n2, (join [s1;s2;s], e, IntType))
-              else Error (sprintf "compat(%s, %s) failed" (string_of_subs s1) (string_of_subs s2))
+              printf "MGU = S %s\n" (string_of_subs s);
+              OK (n2, (join [s1;s2;s], e, IntType))
           | UError (t1, t2) -> report t1 t2)
         | Error s -> Error s)
       | Error s -> Error s)
@@ -45,12 +61,13 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
     | OK (n1, (s1, _, t1)) ->
       (match infer' x n1 with
       | OK (n2, (s2, _, t2)) ->
+          printf "F= %s\n" @@ string_of_typing_judgement (s1, f, t1);
+          printf "X= %s\n" @@ string_of_typing_judgement (s2, x, t2);
         let ret = VarType ("v" ^ string_of_int (n2)) in
-        (match mgu [(t1, FuncType (t2, ret))] with
+        (match mgu @@ (t1, FuncType (t2, ret)) :: compat [s1;s2] with
         | UOk s ->
-            if compat s1 s2
-            then OK (n2+2, (join [s1;s2;s], e, apply_to_texpr s ret))
-            else Error (sprintf "compat(%s, %s) failed" (string_of_subs s1) (string_of_subs s2))
+              printf "MGU = S %s\n" (string_of_subs s);
+            OK (n2+2, (join [s1;s2;s], e, apply_to_texpr s ret))
         | UError (t1, t2) -> report t1 t2)
       | Error s -> Error s)
     | Error s -> Error s)
@@ -69,22 +86,15 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
       (match infer' exp n1 with
       | OK (n2, (s2, _, t2)) ->
         (match lookup s1 var with
-        | None -> OK (n2, (join [s1;s2], e, t2))
-        | Some t -> (match mgu [(t, t2)] with
-                    | UOk s ->
-                      if compat s1 s2
-                      then OK (n2, (join [s1;s2;s], e, t2))
-                      else Error (sprintf "compat(%s, %s) failed" (string_of_subs s1) (string_of_subs s2))
+        | None -> OK (n2, (join [s1;s2], e, t1))
+        | Some t -> (match mgu @@ (t, t2) :: compat [s1;s2] with
+                    | UOk s -> OK (n2, (join [s1;s2;s], e, t2))
                     | UError (t1, t2) -> report t1 t2))
       | Error s -> Error s)
     | Error s -> Error s)
   | _ -> failwith @@ "infer': undefined for " ^ string_of_expr e
 
 
-
-let string_of_typing_judgement = function
-| (tenv, expr, texpr) ->
-  (string_of_subs tenv) ^ " ⊢ " ^ (string_of_expr expr) ^ " : " ^ (string_of_texpr texpr)
 
 
 let infer_type (AProg e) =

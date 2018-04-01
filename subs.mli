@@ -19,6 +19,4 @@ val string_of_subs : subst -> string
 
 val domain : subst -> string list
 
-val compat : subst -> subst -> bool
-
 val join : subst list -> subst

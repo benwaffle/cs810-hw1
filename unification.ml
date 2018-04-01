@@ -9,9 +9,9 @@ let mgu xs =
   List.iter (fun k -> printf "%s =.= %s, " (string_of_texpr @@ fst k) (string_of_texpr @@ snd k)) xs;
   printf "}\n"; *)
   let rec helper (sub:subst) (pairs: (texpr*texpr) list): unif_result =
-    printf "\tS=%s, unify {" (string_of_subs sub);
+    (* printf "\tS=%s, unify {" (string_of_subs sub);
     List.iter (fun k -> printf "%s =.= %s, " (string_of_texpr @@ fst k) (string_of_texpr @@ snd k)) pairs;
-    printf "}\n";
+    printf "}\n"; *)
 
     match pairs with
     | [] -> printf "\tdone %s\n" (string_of_subs sub); UOk (sub)
@@ -29,7 +29,7 @@ let mgu xs =
         helper sub @@ (s1, t1) :: (s2, t2) :: xs
       | (x, y) when x = y -> (* trivial pair elimination *)
         helper sub xs
-      | (VarType (x), y) when not @@ SetStr.mem x (fv_of_type y) -> (* variable elimination *)
+      | (VarType (x), y) when not (SetStr.mem x (fv_of_type y)) -> (* variable elimination *)
         extend sub x y;
         helper sub (List.map (fun pair ->
           (apply_to_texpr sub @@ fst pair, apply_to_texpr sub @@ snd pair)

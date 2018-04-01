@@ -25,44 +25,46 @@ let rec apply_to_texpr set = function
   | FuncType (arg, ret) -> FuncType (apply_to_texpr set arg, apply_to_texpr set ret)
   | RefType t -> RefType (apply_to_texpr set t)
 
-let apply_to_env set env =
-  Hashtbl.iter (fun k v ->
-      (* evaluate VarTypes  *)
-      Hashtbl.replace set k (apply_to_texpr env v)
-    ) set;
-  (* TODO make it evalute VarTypes in env as well *)
-  Hashtbl.iter (fun k v ->
-      (* add from env to set *)
-      (* Printf.printf "adding to %s: %s/%s\n" (string_of_subs set) (string_of_texpr v) k; *)
-      match lookup set k with
-      | Some x ->
-        if x != v
-        then failwith (Printf.sprintf "can't set %s = %s, it's already %s" k (string_of_texpr v) (string_of_texpr x))
-      | None -> Hashtbl.add set k v
-    ) env
-
 let extend set var texpr =
   let ht = create() in
-  Hashtbl.add ht var texpr; (* create tmp hashtbl so we can apply new var *)
-  apply_to_env set ht
+  Hashtbl.add ht var texpr; (* create temp hashtbl so we can apply new var *)
+  Hashtbl.iter (fun k v ->
+    Hashtbl.replace set k (apply_to_texpr ht v)
+  ) set;
+  match lookup set var with
+  | Some x ->
+    if x != texpr
+    then failwith (Printf.sprintf "can't set %s = %s, it's already %s" var (string_of_texpr texpr) (string_of_texpr x))
+  | None -> Hashtbl.add set var texpr
+
+let apply_to_env set env =
+  Hashtbl.iter (fun k v ->
+    Hashtbl.replace set k (apply_to_texpr set v)
+  ) env
 
 let remove = Hashtbl.remove
 
-let apply_to_expr set = function
-  | x -> x
+let rec apply_to_expr set e =
+  match e with
+  | Unit | Var _ | Int _ -> e
+  | Add (a, b) -> Add (apply_to_expr set a, apply_to_expr set b)
+  | Sub (a, b) -> Sub (apply_to_expr set a, apply_to_expr set b)
+  | Mul (a, b) -> Mul (apply_to_expr set a, apply_to_expr set b)
+  | Div (a, b) -> Div (apply_to_expr set a, apply_to_expr set b)
+  | Let (v, e, b) -> Let (v, apply_to_expr set e, apply_to_expr set b)
+  | IsZero e -> IsZero (apply_to_expr set e)
+  | ITE (i, t, e) -> ITE (apply_to_expr set i, apply_to_expr set t, apply_to_expr set e)
+  | Proc (v, t, b) -> Proc (v, apply_to_texpr set t, apply_to_expr set b)
+  | ProcUntyped (v, b) ->
+    (match lookup set v with
+    | Some t -> Proc (v, t, apply_to_expr set b)
+    | None -> ProcUntyped (v, apply_to_expr set b))
+  | App (f, x) -> App (apply_to_expr set f, apply_to_expr set x)
+  | _ -> e
 
 let domain set =
   Hashtbl.fold (fun k v acc -> k :: acc) set []
 
-let compat (a:subst) (b:subst) : bool =
-  let bd = domain b in
-  List.fold_left (fun acc k ->
-    if List.mem k bd
-    then acc && (Hashtbl.find a k = Hashtbl.find b k)
-    else acc
-  ) true (domain a)
-
-(* compose *)
 let rec join = function
   | [] -> create ()
   | [x] -> x
