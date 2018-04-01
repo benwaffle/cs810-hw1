@@ -44,12 +44,8 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
       | OK (n1, (s1, _, t1)) ->
         (match infer' e2 n1 with
         | OK (n2, (s2, _, t2)) -> 
-          printf "L= %s\n" @@ string_of_typing_judgement (s1, e1, t1);
-          printf "R= %s\n" @@ string_of_typing_judgement (s2, e2, t2);
           (match mgu @@ List.append [(t1, IntType);(t2, IntType)] (compat [s1;s2]) with
-          | UOk s ->
-              printf "MGU = S %s\n" (string_of_subs s);
-              OK (n2, (join @@ List.map (apply_to_env2 s) [s1;s2], e, IntType))
+          | UOk s -> OK (n2, (join @@ List.map (apply_to_env2 s) [s1;s2], e, IntType))
           | UError (t1, t2) -> report t1 t2)
         | Error s -> Error s)
       | Error s -> Error s)
@@ -67,13 +63,9 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
     | OK (n1, (s1, _, t1)) ->
       (match infer' x n1 with
       | OK (n2, (s2, _, t2)) ->
-          printf "F= %s\n" @@ string_of_typing_judgement (s1, f, t1);
-          printf "X= %s\n" @@ string_of_typing_judgement (s2, x, t2);
         let ret = VarType ("v" ^ string_of_int (n2)) in
         (match mgu @@ (t1, FuncType (t2, ret)) :: compat [s1;s2] with
-        | UOk s ->
-              printf "MGU = S %s\n" (string_of_subs s);
-            OK (n2+2, (join @@ List.map (apply_to_env2 s) [s1;s2], e, apply_to_texpr s ret))
+        | UOk s -> OK (n2+2, (join @@ List.map (apply_to_env2 s) [s1;s2], e, apply_to_texpr s ret))
         | UError (t1, t2) -> report t1 t2)
       | Error s -> Error s)
     | Error s -> Error s)
