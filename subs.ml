@@ -6,12 +6,20 @@ let create () = Hashtbl.create 10
 
 let lookup = Hashtbl.find_opt
 
+let domain set =
+  Hashtbl.fold (fun k v acc -> k :: acc) set []
+
 let string_of_subs set =
-  "{" ^
-  (Hashtbl.fold (fun k v acc ->
-       Ast.string_of_texpr(v) ^ "/" ^ k ^ ", " ^ acc
-     ) set "")
-  ^ "}"
+  match Hashtbl.length set with
+  | 0 -> "{}"
+  | _ ->
+    let keys = domain set in
+    "{"
+    ^ List.fold_left
+           (fun acc k -> Printf.sprintf "%s, %s/%s" acc (Ast.string_of_texpr @@ Hashtbl.find set k) k)
+           (Printf.sprintf "%s/%s" (Ast.string_of_texpr @@ Hashtbl.find set @@ List.hd keys) (List.hd keys))
+           (List.tl keys)
+           ^ "}"
 
 let rec apply_to_texpr set = function
   | IntType -> IntType
@@ -61,9 +69,6 @@ let rec apply_to_expr set e =
     | None -> ProcUntyped (v, apply_to_expr set b))
   | App (f, x) -> App (apply_to_expr set f, apply_to_expr set x)
   | _ -> e
-
-let domain set =
-  Hashtbl.fold (fun k v acc -> k :: acc) set []
 
 let join (xs: subst list) : subst =
   List.fold_left (fun acc sub ->
