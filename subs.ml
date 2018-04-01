@@ -33,7 +33,7 @@ let extend set var texpr =
   ) set;
   match lookup set var with
   | Some x ->
-    if x != texpr
+    if x <> texpr
     then failwith (Printf.sprintf "can't set %s = %s, it's already %s" var (string_of_texpr texpr) (string_of_texpr x))
   | None -> Hashtbl.add set var texpr
 
@@ -69,7 +69,7 @@ let join (xs: subst list) : subst =
   List.fold_left (fun acc sub ->
     Hashtbl.iter (fun k v ->
       match lookup sub k with
-      | Some x when x != v -> failwith @@ Printf.sprintf "join failed; %s != %s" (string_of_texpr x) (string_of_texpr v)
+      | Some x when x <> v -> failwith @@ Printf.sprintf "join failed; %s != %s" (string_of_texpr x) (string_of_texpr v)
       | _ -> extend acc k v
     ) sub;
     acc

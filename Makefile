@@ -1,17 +1,15 @@
-.PHONY: all clean byte test repl utop
+.PHONY: all clean infer test repl utop
 
 OCB_FLAGS = -tag bin_annot -use-menhir -use-ocamlfind -pkgs oUnit
 OCB = ocamlbuild $(OCB_FLAGS)
 
-all: infer
+infer:
+	$(OCB) infer.byte
 
 clean:
 	$(OCB) -clean
 
-infer:
-	$(OCB) infer.byte
-
-utop: byte
+utop: infer
 	utop
 
 test:
