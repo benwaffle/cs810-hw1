@@ -16,10 +16,10 @@ let string_of_subs set =
     let keys = domain set in
     "{"
     ^ List.fold_left
-           (fun acc k -> Printf.sprintf "%s, %s/%s" acc (Ast.string_of_texpr @@ Hashtbl.find set k) k)
-           (Printf.sprintf "%s/%s" (Ast.string_of_texpr @@ Hashtbl.find set @@ List.hd keys) (List.hd keys))
-           (List.tl keys)
-           ^ "}"
+      (fun acc k -> Printf.sprintf "%s, %s/%s" acc (Ast.string_of_texpr @@ Hashtbl.find set k) k)
+      (Printf.sprintf "%s/%s" (Ast.string_of_texpr @@ Hashtbl.find set @@ List.hd keys) (List.hd keys))
+      (List.tl keys)
+    ^ "}"
 
 let rec apply_to_texpr set = function
   | IntType -> IntType
@@ -37,8 +37,8 @@ let extend set var texpr =
   let ht = create() in
   Hashtbl.add ht var texpr; (* create temp hashtbl so we can apply new var *)
   Hashtbl.iter (fun k v ->
-    Hashtbl.replace set k (apply_to_texpr ht v)
-  ) set;
+      Hashtbl.replace set k (apply_to_texpr ht v)
+    ) set;
   match lookup set var with
   | Some x ->
     if x <> texpr
@@ -47,8 +47,8 @@ let extend set var texpr =
 
 let apply_to_env set env =
   Hashtbl.iter (fun k v ->
-    Hashtbl.replace env k (apply_to_texpr set v)
-  ) env
+      Hashtbl.replace env k (apply_to_texpr set v)
+    ) env
 
 let remove = Hashtbl.remove
 
@@ -65,17 +65,17 @@ let rec apply_to_expr set e =
   | Proc (v, t, b) -> Proc (v, apply_to_texpr set t, apply_to_expr set b)
   | ProcUntyped (v, b) ->
     (match lookup set v with
-    | Some t -> Proc (v, t, apply_to_expr set b)
-    | None -> ProcUntyped (v, apply_to_expr set b))
+     | Some t -> Proc (v, t, apply_to_expr set b)
+     | None -> ProcUntyped (v, apply_to_expr set b))
   | App (f, x) -> App (apply_to_expr set f, apply_to_expr set x)
   | _ -> e
 
 let join (xs: subst list) : subst =
   List.fold_left (fun acc sub ->
-    Hashtbl.iter (fun k v ->
-      match lookup sub k with
-      | Some x when x <> v -> failwith @@ Printf.sprintf "join failed; %s != %s" (string_of_texpr x) (string_of_texpr v)
-      | _ -> extend acc k v
-    ) sub;
-    acc
-  ) (create()) xs
+      Hashtbl.iter (fun k v ->
+          match lookup sub k with
+          | Some x when x <> v -> failwith @@ Printf.sprintf "join failed; %s != %s" (string_of_texpr x) (string_of_texpr v)
+          | _ -> extend acc k v
+        ) sub;
+      acc
+    ) (create()) xs
