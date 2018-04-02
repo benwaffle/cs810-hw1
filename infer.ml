@@ -96,14 +96,18 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
      | OK (n1, (tenv_body, _, t1)) ->
        (match infer' exp n1 with
         | OK (n2, (tenv_exp, _, exp_type_inferred)) ->
+          let tenv () =
+            let tenvs = join [tenv_body; tenv_exp] in
+            remove tenvs var; (* remove let var because it's scoped *)
+            tenvs in
           (match lookup tenv_body var with
            | None -> (* let var not used in body *)
              (match mgu @@ compat [tenv_body; tenv_exp] with
-              | UOk s -> OK (n2, (join [tenv_body; tenv_exp], e, t1))
+              | UOk s -> OK (n2, (tenv (), e, t1))
               | UError (t1, t2) -> report t1 t2)
            | Some exp_type_body -> (* let var used *)
              (match mgu @@ (exp_type_body, exp_type_inferred) :: compat [tenv_body; tenv_exp] with
-              | UOk s -> OK (n2, (join [tenv_body; tenv_exp;s], e, exp_type_inferred))
+              | UOk s -> OK (n2, (tenv (), e, exp_type_inferred))
               | UError (t1, t2) -> report t1 t2))
         | Error s -> Error s)
      | Error s -> Error s)
