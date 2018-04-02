@@ -14,7 +14,7 @@ let mgu xs =
        printf "}\n"; *)
 
     match pairs with
-    | [] -> printf "\tdone %s\n" (string_of_subs sub); UOk (sub)
+    | [] -> (*printf "\tdone %s\n" (string_of_subs sub);*) UOk (sub)
     | (t1, t2) :: xs ->
 
       (* printf "\t FV(%s) = {" (string_of_texpr t1); *)
@@ -23,7 +23,7 @@ let mgu xs =
       (* printf "\t%s in? FV(%s) = {" (string_of_texpr t1) (string_of_texpr t2); *)
       (* SetStr.iter (printf "%s, ") @@ fv_of_type t2; *)
       (* printf "}\n"; *)
-      Printf.printf "\t%s =.= %s\n" (string_of_texpr t1) (string_of_texpr t2);
+      (* Printf.printf "\t%s =.= %s\n" (string_of_texpr t1) (string_of_texpr t2); *)
       match (t1, t2) with
       | (FuncType (s1, s2), FuncType (t1, t2)) -> (* decomposition *)
         helper sub @@ (s1, t1) :: (s2, t2) :: xs

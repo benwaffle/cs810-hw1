@@ -69,25 +69,41 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
            | UError (t1, t2) -> report t1 t2)
         | Error s -> Error s)
      | Error s -> Error s)
-  | ProcUntyped (arg, body) ->
+  | Proc (arg, argtype, body) ->
     (match infer' body n with
      | OK (n1, (s1, _, t1)) ->
        let arg = (match lookup s1 arg with
            | None -> VarType arg
            | Some t -> t) in
-       OK (n1, (s1, e, FuncType (arg, t1)))
+       (match mgu [(arg, argtype)] with
+        | UOk s -> OK (n1, (apply_to_env2 s s1, e, apply_to_texpr s t1))
+        | UError (t1, t2) -> report t1 t2)
+     | Error s -> Error s)
+  | ProcUntyped (arg, body) ->
+    (match infer' body n with
+     | OK (n1, (s1, e1, t1)) ->
+       let arg_t = (match lookup s1 arg with
+           | None -> VarType arg (* arg not used in body, make a VarType *)
+           | Some t -> t) in (* arg used in body, get inferred type  *)
+       let proc_typed = apply_to_expr (let ht = create() in extend ht arg arg_t; ht) @@ ProcUntyped(arg, e1) in (* convert ProcUntyped to Proc *)
+       remove s1 arg; (* remove argument type from env because it's scoped *)
+       OK (n1, (s1, proc_typed, FuncType (arg_t, t1)))
      | Error s -> Error s)
   | Let (var, exp, body) ->
     printf "let %s = %s in %s\n" var (string_of_expr exp) (string_of_expr body);
     (match infer' body n with
-     | OK (n1, (s1, _, t1)) ->
+     | OK (n1, (tenv_body, _, t1)) ->
        (match infer' exp n1 with
-        | OK (n2, (s2, _, t2)) ->
-          (match lookup s1 var with
-           | None -> OK (n2, (join [s1;s2], e, t1))
-           | Some t -> (match mgu @@ (t, t2) :: compat [s1;s2] with
-               | UOk s -> OK (n2, (join [s1;s2;s], e, t2))
-               | UError (t1, t2) -> report t1 t2))
+        | OK (n2, (tenv_exp, _, exp_type_inferred)) ->
+          (match lookup tenv_body var with
+           | None -> (* let var not used in body *)
+             (match mgu @@ compat [tenv_body; tenv_exp] with
+              | UOk s -> OK (n2, (join [tenv_body; tenv_exp], e, t1))
+              | UError (t1, t2) -> report t1 t2)
+           | Some exp_type_body -> (* let var used *)
+             (match mgu @@ (exp_type_body, exp_type_inferred) :: compat [tenv_body; tenv_exp] with
+              | UOk s -> OK (n2, (join [tenv_body; tenv_exp;s], e, exp_type_inferred))
+              | UError (t1, t2) -> report t1 t2))
         | Error s -> Error s)
      | Error s -> Error s)
   | _ -> failwith @@ "infer': undefined for " ^ string_of_expr e
