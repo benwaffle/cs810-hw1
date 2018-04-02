@@ -8,9 +8,10 @@ type 'a error = OK of 'a | Error of string
 
 type typing_judgement = subst*expr*texpr
 
-let string_of_typing_judgement = function
-  | (tenv, expr, texpr) ->
-    (string_of_subs tenv) ^ " ⊢ " ^ (string_of_expr expr) ^ " : " ^ (string_of_texpr texpr)
+let string_of_typing_judgement tj =
+  let (tenv, expr, texpr) = tj in
+    Printf.sprintf "\027[31m%s\027[34m ⊢ \027[32m%s \027[34m: \027[33m%s \027[0m"
+          (string_of_subs tenv) (string_of_expr expr)(string_of_texpr texpr)
 
 let compat (xs : subst list) : (texpr * texpr) list =
   List.flatten @@ List.flatten @@ List.map (fun s1 ->
