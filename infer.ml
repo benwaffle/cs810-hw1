@@ -111,6 +111,22 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
               | UError (t1, t2) -> report t1 t2))
         | Error s -> Error s)
      | Error s -> Error s)
+  | BeginEnd exprs ->
+    let acc = List.fold_left (fun acc expr ->
+      match acc with
+      | OK (tenvs, n_prev, typ_prev) ->
+        (match infer' expr n_prev with
+        | OK (n_new, (tenv, _, typ)) ->
+          OK (tenv :: tenvs, n_new, typ)
+        | Error s -> Error s)
+      | err -> err
+    ) (OK ([], n, UnitType)) exprs in
+    (match acc with
+    | OK (tenvs, n_last, typ) ->
+      (match mgu (compat tenvs) with
+      | UOk s -> OK (n_last, (join tenvs, e, typ))
+      | UError (t1, t2) -> report t1 t2)
+    | Error s -> Error s)
   | _ -> failwith @@ "infer': undefined for " ^ string_of_expr e
 
 
