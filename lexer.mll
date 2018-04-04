@@ -58,7 +58,6 @@ rule read =
   | "then"   { THEN }
   | "else"   { ELSE }
   | "letrec" { LETREC }
-  | "set"    { SET }
   | "begin"  { BEGIN }
   | "end"    { END }
   | "newref" { NEWREF }

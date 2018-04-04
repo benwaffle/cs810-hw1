@@ -259,10 +259,6 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
         | err -> err)
      | err -> err)
 
-  | _ -> failwith @@ "infer': undefined for " ^ string_of_expr e
-
-
-
 
 let infer_type (AProg e) =
   match infer' e 0 with

@@ -80,7 +80,10 @@ let rec apply_to_expr set e =
           LetrecUntyped (func, var, apply_to_expr set func_body, apply_to_expr set in_body))
      | _ ->
        LetrecUntyped (func, var, apply_to_expr set func_body, apply_to_expr set in_body))
-  | _ -> e
+  | BeginEnd xs -> BeginEnd (List.map (apply_to_expr set) xs)
+  | NewRef e -> NewRef (apply_to_expr set e)
+  | DeRef e -> DeRef (apply_to_expr set e)
+  | SetRef (r, v) -> SetRef (apply_to_expr set r, apply_to_expr set v)
 
 open Printf
 

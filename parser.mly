@@ -38,7 +38,6 @@ open Ast
 %token THEN
 %token ELSE
 %token LETREC
-%token SET
 %token BEGIN
 %token END
 %token NEWREF
@@ -158,7 +157,6 @@ expr:
     | DEREF; LPAREN; e = expr; RPAREN { DeRef(e) }
     | SETREF; LPAREN; e1 = expr; COMMA; e2 = expr; RPAREN { SetRef(e1,e2) }
     | IF; e1 = expr; THEN; e2 = expr; ELSE; e3 = expr { ITE(e1,e2,e3) }
-    | SET; x = ID; EQUALS; e = expr { Set(x,e) }
     | BEGIN; es = exprs; END { BeginEnd(es) }
     | LPAREN; e = expr; RPAREN {e}
       (*    | MINUS e = expr %prec UMINUS { SubExp(IntExp 0,e) }*)

@@ -16,7 +16,6 @@ type expr =
   | App of expr*expr
   | Letrec of texpr*string*string*texpr*expr*expr
   | LetrecUntyped of string*string*expr*expr
-  | Set of string*expr
   | BeginEnd of expr list
   | NewRef of expr
   | DeRef of expr
@@ -54,7 +53,6 @@ let rec string_of_expr e =
   | Letrec(tRes,x,param,tPara, def,body) -> "Letrec("^string_of_texpr
                                               tRes^" "^x^","^param^":"^string_of_texpr tPara ^","^ string_of_expr def ^","^ string_of_expr body ^")"
   | LetrecUntyped(x,param,def,body) -> "Letrec("^x^","^param^","^ string_of_expr def ^","^ string_of_expr body ^")"
-  | Set(x,rhs) -> "Set("^x^","^string_of_expr rhs^")"
   | BeginEnd(es) -> "BeginEnd(" ^ List.fold_left (fun x y -> x^","^y)
                       "" (List.map string_of_expr es) ^")"
 and string_of_texpr = function
@@ -94,7 +92,6 @@ let rec fv = function
     SetStr.union (SetStr.remove x (fv def)) (SetStr.remove x (fv body))
   | LetrecUntyped(x,param,def,body) ->
     SetStr.union (SetStr.remove x (fv def)) (SetStr.remove x (fv body))
-  | Set(x,rhs) -> SetStr.add x (fv rhs)
   | BeginEnd(es) ->  List.fold_left (fun s e -> SetStr.union s (fv e))
                        SetStr.empty  es
 
