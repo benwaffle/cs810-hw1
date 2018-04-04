@@ -119,8 +119,7 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
       match acc with
       | OK (tenvs, n_prev, typ_prev) ->
         (match infer' expr n_prev with
-        | OK (n_new, (tenv, _, typ)) ->
-          OK (tenv :: tenvs, n_new, typ)
+        | OK (n_new, (tenv, _, typ)) -> OK (tenv :: tenvs, n_new, typ)
         | Error s -> Error s)
       | err -> err
     ) (OK ([], n, UnitType)) exprs in
@@ -130,6 +129,17 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
       | UOk s -> OK (n_last, (join @@ List.map (apply_to_env2 s) tenvs, e, typ))
       | UError (t1, t2) -> report t1 t2)
     | Error s -> Error s)
+  | SetRef (ref, value) ->
+    (match infer' ref n with
+    | OK (n1, (tenv_ref, _, ref_type)) ->
+      (match infer' value n1 with
+      | OK (n2, (tenv_val, _, val_type)) ->
+        let contents = VarType ("v"^(string_of_int n2)) in
+        (match mgu @@ (ref_type, RefType (contents)) :: (val_type, contents) :: (compat [tenv_ref;tenv_val]) with
+        | UOk s -> OK (n2+1, (join @@ List.map (apply_to_env2 s) [tenv_ref ; tenv_val], e, UnitType))
+        | UError (a, b) -> report a b)
+      | err -> err)
+    | err -> err)
   | _ -> failwith @@ "infer': undefined for " ^ string_of_expr e
 
 
