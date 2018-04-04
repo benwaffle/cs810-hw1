@@ -9,23 +9,12 @@ let mgu xs =
      List.iter (fun k -> printf "%s =.= %s, " (string_of_texpr @@ fst k) (string_of_texpr @@ snd k)) xs;
      printf "}\n"; *)
   let rec helper (sub:subst) (pairs: (texpr*texpr) list): unif_result =
-    (* printf "\tS=%s, unify {" (string_of_subs sub);
-       List.iter (fun k -> printf "%s =.= %s, " (string_of_texpr @@ fst k) (string_of_texpr @@ snd k)) pairs;
-       printf "}\n"; *)
 
     match pairs with
     | [] ->
       (* printf "\tdone %s\n" (string_of_subs sub); *)
       UOk (sub)
     | (t1, t2) :: xs ->
-
-      (* printf "\t FV(%s) = {" (string_of_texpr t1); *)
-      (* SetStr.iter (printf "%s, ") @@ fv_of_type t1; *)
-      (* printf "}\n\t FV(%s) = {" (string_of_texpr t2); *)
-      (* printf "\t%s in? FV(%s) = {" (string_of_texpr t1) (string_of_texpr t2); *)
-      (* SetStr.iter (printf "%s, ") @@ fv_of_type t2; *)
-      (* printf "}\n"; *)
-      (* Printf.printf "\t%s =.= %s\n" (string_of_texpr t1) (string_of_texpr t2); *)
       match (t1, t2) with
       | (FuncType (s1, s2), FuncType (t1, t2)) -> (* decomposition *)
         helper sub @@ (s1, t1) :: (s2, t2) :: xs
@@ -40,6 +29,8 @@ let mgu xs =
         UError (t1, t2)
       | (x, VarType (y)) -> (* swap *)
         helper sub @@ (t2, t1) :: xs
+      | (RefType (x), RefType (y)) ->
+        helper sub @@ (x, y) :: xs
       | _ -> (* fail, e.g. N = B *)
         UError (t1, t2)
   in helper (create ()) xs
