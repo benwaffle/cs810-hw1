@@ -94,7 +94,6 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
        OK (n1, (s1, proc_typed, FuncType (arg_t, t1)))
      | Error s -> Error s)
   | Let (var, exp, body) ->
-    printf "let %s = %s in %s\n" var (string_of_expr exp) (string_of_expr body);
     (match infer' body n with
      | OK (n1, (tenv_body, _, t1)) ->
        (match infer' exp n1 with
@@ -139,6 +138,14 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
         | UOk s -> OK (n2+1, (join @@ List.map (apply_to_env2 s) [tenv_ref ; tenv_val], e, UnitType))
         | UError (a, b) -> report a b)
       | err -> err)
+    | err -> err)
+  | DeRef (ref) ->
+    (match infer' ref n with
+    | OK (n1, (tenv, _, ref_type)) ->
+      let contents = VarType ("v"^(string_of_int n1)) in
+      (match mgu [(ref_type, RefType (contents))] with
+      | UOk s -> OK (n1+1, (apply_to_env2 s tenv, apply_to_expr s e, apply_to_texpr s contents))
+      | UError (a, b) -> report a b)
     | err -> err)
   | _ -> failwith @@ "infer': undefined for " ^ string_of_expr e
 
