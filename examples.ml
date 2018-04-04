@@ -46,4 +46,8 @@ in (f (infiniteLoop 0))"
   | 25 -> "begin (x y); 3; 4+x end"
   | 26 -> "begin (x y); 3; 4+y end"
   | 27 -> "letrec rip (x) = (rip x) in begin (rip g); rip end"
+  | 28 -> "if (x y) then y else 3"
+  | 29 -> "
+letrec fact (x:int):int = if zero?(x) then 1 else x*(fact (x-1))
+in (fact 7)"
   | n -> failwith @@ "Expression " ^string_of_int  n ^ " is not defined"

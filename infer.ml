@@ -27,13 +27,16 @@ let compat (xs : subst list) : (texpr * texpr) list =
         ) xs
     ) xs
 
-let apply_to_env2 s e =
-  apply_to_env s e;
-  e
+let apply_to_env2 s es =
+  List.map (fun e ->
+      apply_to_env s e;
+      e
+    ) es
 
 let apply_to_tj (s : subst) (tj : typing_judgement) : typing_judgement =
   let (tenv, exp, texp) = tj in
-  (apply_to_env2 s tenv, apply_to_expr s exp, apply_to_texpr s texp)
+  apply_to_env s tenv;
+  (tenv, apply_to_expr s exp, apply_to_texpr s texp)
 
 let report t1 t2 =
   Error (Printf.sprintf "cannot unify %s and %s" (string_of_texpr t1) (string_of_texpr t2))
@@ -58,7 +61,7 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
        (match infer' e2 n1 with
         | OK (n2, (s2, _, t2)) -> 
           (match mgu @@ List.append [(t1, IntType);(t2, IntType)] (compat [s1;s2]) with
-           | UOk s -> OK (n2, apply_to_tj s (join @@ List.map (apply_to_env2 s) [s1;s2], e, IntType))
+           | UOk s -> OK (n2, apply_to_tj s (join @@ apply_to_env2 s [s1;s2], e, IntType))
            | UError (t1, t2) -> report t1 t2)
         | err -> err)
      | err -> err)
@@ -67,7 +70,9 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
     (match infer' e1 n with
      | OK (n1, (s1, _, t1)) ->
        (match mgu [(t1, IntType)] with
-        | UOk s -> OK (n1, (apply_to_env2 s s1, e, BoolType))
+        | UOk s ->
+          apply_to_env s s1;
+          OK (n1, (s1, e, BoolType))
         | UError (t1, t2) -> report t1 t2)
      | err -> err)
 
@@ -78,7 +83,7 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
         | OK (n2, (s2, x2, t2)) ->
           let ret = VarType ("v" ^ string_of_int (n2)) in
           (match mgu @@ (t1, FuncType (t2, ret)) :: compat [s1;s2] with
-           | UOk s -> OK (n2+2, apply_to_tj s (join @@ List.map (apply_to_env2 s) [s1;s2], App (f2, x2), ret))
+           | UOk s -> OK (n2+2, apply_to_tj s (join @@ apply_to_env2 s [s1;s2], App (f2, x2), ret))
            | UError (t1, t2) -> report t1 t2)
         | err -> err)
      | err -> err)
@@ -115,7 +120,7 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
         | OK (n2, (tenv_body, _, t1)) ->
           let tenv s =
             remove tenv_body var; (* remove scoped var *)
-            join @@ List.map (apply_to_env2 s) [tenv_body; tenv_exp] in
+            join @@ apply_to_env2 s [tenv_body; tenv_exp] in
           (match lookup tenv_body var with
            | None -> (* let var not used in body *)
              (match mgu @@ compat [tenv_body; tenv_exp] with
@@ -140,7 +145,7 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
     (match acc with
      | OK (tenvs, n_last, typ) ->
        (match mgu (compat tenvs) with
-        | UOk s -> OK (n_last, apply_to_tj s (join @@ List.map (apply_to_env2 s) tenvs, e, typ))
+        | UOk s -> OK (n_last, apply_to_tj s (join @@ apply_to_env2 s tenvs, e, typ))
         | UError (t1, t2) -> report t1 t2)
      | Error s -> Error s)
 
@@ -156,7 +161,7 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
         | OK (n2, (tenv_val, _, val_type)) ->
           let contents = VarType ("v"^(string_of_int n2)) in
           (match mgu @@ (ref_type, RefType (contents)) :: (val_type, contents) :: (compat [tenv_ref;tenv_val]) with
-           | UOk s -> OK (n2+1, apply_to_tj s (join @@ List.map (apply_to_env2 s) [tenv_ref;tenv_val], e, UnitType))
+           | UOk s -> OK (n2+1, apply_to_tj s (join @@ apply_to_env2 s [tenv_ref;tenv_val], e, UnitType))
            | UError (a, b) -> report a b)
         | err -> err)
      | err -> err)
@@ -191,17 +196,34 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
               compat [tenv_func_body; tenv_in_body]
             ] in
           let letrec_typed = apply_to_expr
-            (let ht = create () in
-             extend ht func @@ FuncType (arg_t, ret_t);
-             extend ht arg arg_t;
-             ht) @@ LetrecUntyped (func, arg, func_body, in_body) in
+              (let ht = create () in
+               extend ht func @@ FuncType (arg_t, ret_t);
+               extend ht arg arg_t;
+               ht) @@ LetrecUntyped (func, arg, func_body, in_body) in
           (match mgu pairs with
-            | UOk s ->
-              remove tenv_func_body arg;
-              remove tenv_func_body func;
-              remove tenv_in_body func;
-              OK (n2+1, apply_to_tj s (join @@ List.map (apply_to_env2 s) [tenv_func_body; tenv_in_body], letrec_typed, body_t))
-            | UError (a, b) -> report a b)
+           | UOk s ->
+             remove tenv_func_body arg;
+             remove tenv_func_body func;
+             remove tenv_in_body func;
+             OK (n2+1, apply_to_tj s (join @@ apply_to_env2 s [tenv_func_body; tenv_in_body], letrec_typed, body_t))
+           | UError (a, b) -> report a b)
+        | err -> err)
+     | err -> err)
+
+  | ITE (cond, then_body, else_body) ->
+    (match infer' cond n with
+     | OK (n1, (cond_tenv, cond, cond_t)) ->
+       (match infer' then_body n1 with
+        | OK (n2, (then_tenv, then_body, then_t)) ->
+          (match infer' else_body n2 with
+           | OK (n3, (else_tenv, else_body, else_t)) ->
+             (match mgu @@ (cond_t, BoolType) :: (then_t, else_t) :: compat [cond_tenv; then_tenv; else_tenv] with
+              | UOk s -> OK (n3,
+                             apply_to_tj s (join @@ apply_to_env2 s [cond_tenv; then_tenv; else_tenv],
+                                            ITE (cond, then_body, else_body),
+                                            then_t))
+              | UError (a, b) -> report a b)
+           | err -> err)
         | err -> err)
      | err -> err)
 
