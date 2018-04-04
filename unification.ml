@@ -5,14 +5,14 @@ open Printf
 type unif_result = UOk of Subs.subst | UError of texpr*texpr
 
 let mgu xs =
-  printf "unify {";
+  (* printf "unify {";
   List.iter (fun k -> printf "%s =.= %s, " (string_of_texpr @@ fst k) (string_of_texpr @@ snd k)) xs;
-  printf "}\n";
+  printf "}\n"; *)
   let rec helper (sub:subst) (pairs: (texpr*texpr) list): unif_result =
 
     match pairs with
     | [] ->
-      printf "\tdone %s\n" (string_of_subs sub);
+      (* printf "\tdone %s\n" (string_of_subs sub); *)
       UOk (sub)
     | (t1, t2) :: xs ->
       match (t1, t2) with

@@ -14,9 +14,9 @@ let string_of_typing_judgement tj =
     (string_of_subs tenv) (string_of_expr expr)(string_of_texpr texpr)
 
 let compat (xs : subst list) : (texpr * texpr) list =
-  printf "\n\tcompat({";
+  (* printf "\n\tcompat({";
   List.iter (fun a -> printf "%s, " (string_of_subs a)) xs;
-  printf "})\n";
+  printf "})\n"; *)
   List.flatten @@ List.flatten @@ List.map (fun s1 ->
       List.map (fun s2 ->
           List.fold_left (fun acc var ->
@@ -112,9 +112,6 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
      | OK (n1, (tenv_exp, _, exp_type_inferred)) ->
        (match infer' body n1 with
         | OK (n2, (tenv_body, _, t1)) ->
-        printf "let %s = (%s |- %s : %s) in (%s |- %s : %s)"
-          var (string_of_subs tenv_exp) (string_of_expr exp) (string_of_texpr exp_type_inferred)
-          (string_of_subs tenv_body) (string_of_expr body) (string_of_texpr t1);
           let tenv () =
             let tenvs = join [tenv_body; tenv_exp] in
             remove tenvs var; (* remove let var because it's scoped *)
