@@ -14,9 +14,9 @@ let string_of_typing_judgement tj =
     (string_of_subs tenv) (string_of_expr expr)(string_of_texpr texpr)
 
 let compat (xs : subst list) : (texpr * texpr) list =
-  (* printf "\t compat({";
-     List.iter (fun a -> printf "%s, " (string_of_subs a)) xs;
-     printf "})\n"; *)
+  printf "\n\tcompat({";
+  List.iter (fun a -> printf "%s, " (string_of_subs a)) xs;
+  printf "})\n";
   List.flatten @@ List.flatten @@ List.map (fun s1 ->
       List.map (fun s2 ->
           List.fold_left (fun acc var ->
@@ -31,9 +31,10 @@ let apply_to_env2 s e =
   apply_to_env s e;
   e
 
+let report t1 t2 =
+  Error (Printf.sprintf "cannot unify %s and %s" (string_of_texpr t1) (string_of_texpr t2))
+
 let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
-  let report t1 t2 =
-    Error (Printf.sprintf "cannot unify %s and %s" (string_of_texpr t1) (string_of_texpr t2)) in
   match e with
 
   | Unit -> OK (n, (create (), e, UnitType))
@@ -62,20 +63,18 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
     (match infer' e1 n with
      | OK (n1, (s1, _, t1)) ->
        (match mgu [(t1, IntType)] with
-        | UOk s ->
-          apply_to_env s s1;
-          OK (n1, (s1, e, BoolType))
+        | UOk s -> OK (n1, (apply_to_env2 s s1, e, BoolType))
         | UError (t1, t2) -> report t1 t2)
      | err -> err)
 
   | App (f, x) ->
     (match infer' f n with
-     | OK (n1, (s1, _, t1)) ->
+     | OK (n1, (s1, f2, t1)) ->
        (match infer' x n1 with
-        | OK (n2, (s2, _, t2)) ->
+        | OK (n2, (s2, x2, t2)) ->
           let ret = VarType ("v" ^ string_of_int (n2)) in
           (match mgu @@ (t1, FuncType (t2, ret)) :: compat [s1;s2] with
-           | UOk s -> OK (n2+2, (join @@ List.map (apply_to_env2 s) [s1;s2], e, apply_to_texpr s ret))
+           | UOk s -> OK (n2+2, (join @@ List.map (apply_to_env2 s) [s1;s2], apply_to_expr s (App (f2, x2)), apply_to_texpr s ret))
            | UError (t1, t2) -> report t1 t2)
         | err -> err)
      | err -> err)
@@ -103,10 +102,10 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
      | err -> err)
 
   | Let (var, exp, body) ->
-    (match infer' body n with
-     | OK (n1, (tenv_body, _, t1)) ->
-       (match infer' exp n1 with
-        | OK (n2, (tenv_exp, _, exp_type_inferred)) ->
+    (match infer' exp n with
+     | OK (n1, (tenv_exp, _, exp_type_inferred)) ->
+       (match infer' body n1 with
+        | OK (n2, (tenv_body, _, t1)) ->
           let tenv () =
             let tenvs = join [tenv_body; tenv_exp] in
             remove tenvs var; (* remove let var because it's scoped *)
@@ -138,6 +137,11 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
         | UOk s -> OK (n_last, (join @@ List.map (apply_to_env2 s) tenvs, e, typ))
         | UError (t1, t2) -> report t1 t2)
      | Error s -> Error s)
+
+  | NewRef contents ->
+    (match infer' contents n with
+     | OK (n1, (tenv, _, contents_type)) -> OK (n1, (tenv, e, RefType (contents_type)))
+     | err -> err)
 
   | SetRef (ref, value) ->
     (match infer' ref n with
