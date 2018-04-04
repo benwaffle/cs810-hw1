@@ -14,6 +14,9 @@ let string_of_typing_judgement tj =
           (string_of_subs tenv) (string_of_expr expr)(string_of_texpr texpr)
 
 let compat (xs : subst list) : (texpr * texpr) list =
+  (* printf "\t compat({";
+  List.iter (fun a -> printf "%s, " (string_of_subs a)) xs;
+  printf "})\n"; *)
   List.flatten @@ List.flatten @@ List.map (fun s1 ->
       List.map (fun s2 ->
           List.fold_left (fun acc var ->
@@ -124,7 +127,7 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
     (match acc with
     | OK (tenvs, n_last, typ) ->
       (match mgu (compat tenvs) with
-      | UOk s -> OK (n_last, (join tenvs, e, typ))
+      | UOk s -> OK (n_last, (join @@ List.map (apply_to_env2 s) tenvs, e, typ))
       | UError (t1, t2) -> report t1 t2)
     | Error s -> Error s)
   | _ -> failwith @@ "infer': undefined for " ^ string_of_expr e

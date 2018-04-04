@@ -14,7 +14,9 @@ let mgu xs =
        printf "}\n"; *)
 
     match pairs with
-    | [] -> (*printf "\tdone %s\n" (string_of_subs sub);*) UOk (sub)
+    | [] ->
+      (* printf "\tdone %s\n" (string_of_subs sub); *)
+      UOk (sub)
     | (t1, t2) :: xs ->
 
       (* printf "\t FV(%s) = {" (string_of_texpr t1); *)

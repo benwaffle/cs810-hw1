@@ -42,7 +42,7 @@ let extend set var texpr =
   match lookup set var with
   | Some x ->
     if x <> texpr
-    then failwith (Printf.sprintf "can't set %s = %s, it's already %s" var (string_of_texpr texpr) (string_of_texpr x))
+    then failwith (Printf.sprintf "on %s, can't set %s = %s, it's already %s" (string_of_subs set) var (string_of_texpr texpr) (string_of_texpr x))
   | None -> Hashtbl.add set var texpr
 
 let apply_to_env set env =
@@ -69,6 +69,8 @@ let rec apply_to_expr set e =
      | None -> ProcUntyped (v, apply_to_expr set b))
   | App (f, x) -> App (apply_to_expr set f, apply_to_expr set x)
   | _ -> e
+
+open Printf
 
 let join (xs: subst list) : subst =
   List.fold_left (fun acc sub ->
