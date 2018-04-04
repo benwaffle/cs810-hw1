@@ -50,4 +50,14 @@ in (f (infiniteLoop 0))"
   | 29 -> "
 letrec fact (x:int):int = if zero?(x) then 1 else x*(fact (x-1))
 in (fact 7)"
+  | 30 -> "
+let false = zero?(1) in
+let true = zero?(0) in
+letrec bad (x: int): bool->bool = if zero?(x) then proc(x) {x} else proc(y) {y}
+in ((bad 7) false)"
+  | 31 -> "
+let false = zero?(1) in
+let true = zero?(0) in
+letrec bad (x: int): bool->bool = if zero?(x) then proc(x) {x} else proc(y) {y}
+in ((bad 7) false)"
   | n -> failwith @@ "Expression " ^string_of_int  n ^ " is not defined"

@@ -210,6 +210,38 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
         | err -> err)
      | err -> err)
 
+  | Letrec (ret_t, func, arg, arg_t, func_body, in_body) ->
+    (match infer' func_body n with
+     | OK (n1, (tenv_func_body, func_body, ret_t_inferred)) ->
+       (match infer' in_body n1 with
+        | OK (n2, (tenv_in_body, in_body, body_t)) ->
+          let pairs = List.concat [
+              [(ret_t, ret_t_inferred)]
+              ;
+              (match lookup tenv_func_body arg with
+               | None -> []
+               | Some arg_t_inferred -> [(arg_t, arg_t_inferred)])
+              ;
+              (match lookup tenv_func_body func with
+               | None -> []
+               | Some func_type -> [(func_type, FuncType (arg_t, ret_t))])
+              ;
+              (match lookup tenv_in_body func with
+               | None -> []
+               | Some func_type -> [(func_type, FuncType (arg_t, ret_t))])
+            ] in (match mgu pairs with
+              | UOk s ->
+                remove tenv_func_body arg;
+                remove tenv_func_body func;
+                remove tenv_in_body func;
+                OK (n2,
+                    apply_to_tj s (join @@ apply_to_env2 s [tenv_func_body; tenv_in_body],
+                                   Letrec (ret_t, func, arg, arg_t, func_body, in_body),
+                                   body_t))
+              | UError (a, b) -> report a b)
+        | err -> err)
+     | err -> err)
+
   | ITE (cond, then_body, else_body) ->
     (match infer' cond n with
      | OK (n1, (cond_tenv, cond, cond_t)) ->
