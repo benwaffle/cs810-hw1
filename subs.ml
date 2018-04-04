@@ -65,9 +65,21 @@ let rec apply_to_expr set e =
   | Proc (v, t, b) -> Proc (v, apply_to_texpr set t, apply_to_expr set b)
   | ProcUntyped (v, b) ->
     (match lookup set v with
-     | Some t -> Proc (v, t, apply_to_expr set b)
+     | Some t -> apply_to_expr set (Proc (v, t, b))
      | None -> ProcUntyped (v, apply_to_expr set b))
   | App (f, x) -> App (apply_to_expr set f, apply_to_expr set x)
+  | Letrec (ret_t, func, arg, arg_t, func_body, in_body) ->
+    Letrec (apply_to_texpr set ret_t, func, arg, apply_to_texpr set arg_t, apply_to_expr set func_body, apply_to_expr set in_body)
+  | LetrecUntyped (func, var, func_body, in_body) ->
+    (match lookup set func with (* lookup type of recursive func *)
+     | Some (FuncType (arg, ret)) ->
+       (match lookup set var with (* lookup type of arg *)
+        | Some arg2 when arg2 = arg ->
+          apply_to_expr set @@ Letrec (ret, func, var, arg, func_body, in_body)
+        | _ ->
+          LetrecUntyped (func, var, apply_to_expr set func_body, apply_to_expr set in_body))
+     | _ ->
+       LetrecUntyped (func, var, apply_to_expr set func_body, apply_to_expr set in_body))
   | _ -> e
 
 open Printf

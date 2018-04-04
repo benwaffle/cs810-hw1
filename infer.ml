@@ -15,8 +15,8 @@ let string_of_typing_judgement tj =
 
 let compat (xs : subst list) : (texpr * texpr) list =
   (* printf "\n\tcompat({";
-  List.iter (fun a -> printf "%s, " (string_of_subs a)) xs;
-  printf "})\n"; *)
+     List.iter (fun a -> printf "%s, " (string_of_subs a)) xs;
+     printf "})\n"; *)
   List.flatten @@ List.flatten @@ List.map (fun s1 ->
       List.map (fun s2 ->
           List.fold_left (fun acc var ->
@@ -100,9 +100,10 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
     (match infer' body n with
      | OK (n1, (s1, e1, t1)) ->
        let arg_t = (match lookup s1 arg with
+           (* TODO: use fresh type variable *)
            | None -> VarType arg (* arg not used in body, make a VarType *)
            | Some t -> t) in (* arg used in body, get inferred type  *)
-       let proc_typed = apply_to_expr (let ht = create() in extend ht arg arg_t; ht) @@ ProcUntyped(arg, e1) in (* convert ProcUntyped to Proc *)
+       let proc_typed = apply_to_expr (let ht = create () in extend ht arg arg_t; ht) @@ ProcUntyped(arg, e1) in (* convert ProcUntyped to Proc *)
        remove s1 arg; (* remove argument type from env because it's scoped *)
        OK (n1, (s1, proc_typed, FuncType (arg_t, t1)))
      | err -> err)
@@ -112,18 +113,17 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
      | OK (n1, (tenv_exp, _, exp_type_inferred)) ->
        (match infer' body n1 with
         | OK (n2, (tenv_body, _, t1)) ->
-          let tenv () =
-            let tenvs = join [tenv_body; tenv_exp] in
-            remove tenvs var; (* remove let var because it's scoped *)
-            tenvs in
+          let tenv s =
+            remove tenv_body var; (* remove scoped var *)
+            join @@ List.map (apply_to_env2 s) [tenv_body; tenv_exp] in
           (match lookup tenv_body var with
            | None -> (* let var not used in body *)
              (match mgu @@ compat [tenv_body; tenv_exp] with
-              | UOk s -> OK (n2, apply_to_tj s (tenv (), e, t1))
+              | UOk s -> OK (n2, apply_to_tj s (tenv s, e, t1))
               | UError (t1, t2) -> report t1 t2)
            | Some exp_type_body -> (* let var used *)
              (match mgu @@ (exp_type_body, exp_type_inferred) :: compat [tenv_body; tenv_exp] with
-              | UOk s -> OK (n2, apply_to_tj s (tenv (), e, t1))
+              | UOk s -> OK (n2, apply_to_tj s (tenv s, e, t1))
               | UError (t1, t2) -> report t1 t2))
         | err -> err)
      | err -> err)
@@ -168,6 +168,41 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
        (match mgu [(ref_type, RefType (contents))] with
         | UOk s -> OK (n1+1, apply_to_tj s (tenv, e, contents))
         | UError (a, b) -> report a b)
+     | err -> err)
+
+  | LetrecUntyped (func, arg, func_body, in_body) ->
+    (match infer' func_body n with
+     | OK (n1, (tenv_func_body, func_body, ret_t)) ->
+       (match infer' in_body n1 with
+        | OK (n2, (tenv_in_body, in_body, body_t)) ->
+          let arg_t = (match lookup tenv_func_body arg with
+              | None -> VarType ("v"^(string_of_int n2))
+              | Some t -> t) in
+          let pairs =
+            List.concat [
+              (match lookup tenv_func_body func with
+               | None -> [] (* not called recursively *)
+               | Some func_type -> [func_type, FuncType (arg_t, ret_t)])
+              ;
+              (match lookup tenv_in_body func with
+               | None -> []
+               | Some func_type -> [func_type, FuncType (arg_t, ret_t)])
+              ;
+              compat [tenv_func_body; tenv_in_body]
+            ] in
+          let letrec_typed = apply_to_expr
+            (let ht = create () in
+             extend ht func @@ FuncType (arg_t, ret_t);
+             extend ht arg arg_t;
+             ht) @@ LetrecUntyped (func, arg, func_body, in_body) in
+          (match mgu pairs with
+            | UOk s ->
+              remove tenv_func_body arg;
+              remove tenv_func_body func;
+              remove tenv_in_body func;
+              OK (n2+1, apply_to_tj s (join @@ List.map (apply_to_env2 s) [tenv_func_body; tenv_in_body], letrec_typed, body_t))
+            | UError (a, b) -> report a b)
+        | err -> err)
      | err -> err)
 
   | _ -> failwith @@ "infer': undefined for " ^ string_of_expr e

@@ -45,4 +45,5 @@ in let f = proc (z) { 11 }
 in (f (infiniteLoop 0))"
   | 25 -> "begin (x y); 3; 4+x end"
   | 26 -> "begin (x y); 3; 4+y end"
+  | 27 -> "letrec rip (x) = (rip x) in begin (rip g); rip end"
   | n -> failwith @@ "Expression " ^string_of_int  n ^ " is not defined"
