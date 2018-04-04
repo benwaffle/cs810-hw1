@@ -10,13 +10,13 @@ type typing_judgement = subst*expr*texpr
 
 let string_of_typing_judgement tj =
   let (tenv, expr, texpr) = tj in
-    Printf.sprintf "\027[31m%s\027[34m ⊢ \027[32m%s \027[34m: \027[33m%s \027[0m"
-          (string_of_subs tenv) (string_of_expr expr)(string_of_texpr texpr)
+  Printf.sprintf "\027[31m%s\027[34m ⊢ \027[32m%s \027[34m: \027[33m%s \027[0m"
+    (string_of_subs tenv) (string_of_expr expr)(string_of_texpr texpr)
 
 let compat (xs : subst list) : (texpr * texpr) list =
   (* printf "\t compat({";
-  List.iter (fun a -> printf "%s, " (string_of_subs a)) xs;
-  printf "})\n"; *)
+     List.iter (fun a -> printf "%s, " (string_of_subs a)) xs;
+     printf "})\n"; *)
   List.flatten @@ List.flatten @@ List.map (fun s1 ->
       List.map (fun s2 ->
           List.fold_left (fun acc var ->
@@ -125,40 +125,40 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
 
   | BeginEnd exprs ->
     let acc = List.fold_left (fun acc expr ->
-      match acc with
-      | OK (tenvs, n_prev, typ_prev) ->
-        (match infer' expr n_prev with
-        | OK (n_new, (tenv, _, typ)) -> OK (tenv :: tenvs, n_new, typ)
-        | Error s -> Error s)
-      | err -> err
-    ) (OK ([], n, UnitType)) exprs in
+        match acc with
+        | OK (tenvs, n_prev, typ_prev) ->
+          (match infer' expr n_prev with
+           | OK (n_new, (tenv, _, typ)) -> OK (tenv :: tenvs, n_new, typ)
+           | Error s -> Error s)
+        | err -> err
+      ) (OK ([], n, UnitType)) exprs in
     (match acc with
-    | OK (tenvs, n_last, typ) ->
-      (match mgu (compat tenvs) with
-      | UOk s -> OK (n_last, (join @@ List.map (apply_to_env2 s) tenvs, e, typ))
-      | UError (t1, t2) -> report t1 t2)
-    | Error s -> Error s)
+     | OK (tenvs, n_last, typ) ->
+       (match mgu (compat tenvs) with
+        | UOk s -> OK (n_last, (join @@ List.map (apply_to_env2 s) tenvs, e, typ))
+        | UError (t1, t2) -> report t1 t2)
+     | Error s -> Error s)
 
   | SetRef (ref, value) ->
     (match infer' ref n with
-    | OK (n1, (tenv_ref, _, ref_type)) ->
-      (match infer' value n1 with
-      | OK (n2, (tenv_val, _, val_type)) ->
-        let contents = VarType ("v"^(string_of_int n2)) in
-        (match mgu @@ (ref_type, RefType (contents)) :: (val_type, contents) :: (compat [tenv_ref;tenv_val]) with
-        | UOk s -> OK (n2+1, (join @@ List.map (apply_to_env2 s) [tenv_ref ; tenv_val], e, UnitType))
-        | UError (a, b) -> report a b)
-      | err -> err)
-    | err -> err)
+     | OK (n1, (tenv_ref, _, ref_type)) ->
+       (match infer' value n1 with
+        | OK (n2, (tenv_val, _, val_type)) ->
+          let contents = VarType ("v"^(string_of_int n2)) in
+          (match mgu @@ (ref_type, RefType (contents)) :: (val_type, contents) :: (compat [tenv_ref;tenv_val]) with
+           | UOk s -> OK (n2+1, (join @@ List.map (apply_to_env2 s) [tenv_ref ; tenv_val], e, UnitType))
+           | UError (a, b) -> report a b)
+        | err -> err)
+     | err -> err)
 
   | DeRef (ref) ->
     (match infer' ref n with
-    | OK (n1, (tenv, _, ref_type)) ->
-      let contents = VarType ("v"^(string_of_int n1)) in
-      (match mgu [(ref_type, RefType (contents))] with
-      | UOk s -> OK (n1+1, (apply_to_env2 s tenv, apply_to_expr s e, apply_to_texpr s contents))
-      | UError (a, b) -> report a b)
-    | err -> err)
+     | OK (n1, (tenv, _, ref_type)) ->
+       let contents = VarType ("v"^(string_of_int n1)) in
+       (match mgu [(ref_type, RefType (contents))] with
+        | UOk s -> OK (n1+1, (apply_to_env2 s tenv, apply_to_expr s e, apply_to_texpr s contents))
+        | UError (a, b) -> report a b)
+     | err -> err)
 
   | _ -> failwith @@ "infer': undefined for " ^ string_of_expr e
 
