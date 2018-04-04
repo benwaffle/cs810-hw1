@@ -60,4 +60,5 @@ let false = zero?(1) in
 let true = zero?(0) in
 letrec bad (x: int): bool->bool = if zero?(x) then proc(x) {x} else proc(y) {y}
 in ((bad 7) false)"
+  | 32 -> "proc(x: unit) { (proc(y){y} zero?(1+(proc(x){x} 3))) }"
   | n -> failwith @@ "Expression " ^string_of_int  n ^ " is not defined"
