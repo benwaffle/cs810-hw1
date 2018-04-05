@@ -120,20 +120,20 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
 
   | Let (var, exp, body) ->
     (match infer' exp n with
-     | OK (n1, (tenv_exp, _, exp_type_inferred)) ->
+     | OK (n1, (tenv_exp, exp, exp_type_inferred)) ->
        (match infer' body n1 with
-        | OK (n2, (tenv_body, _, t1)) ->
+        | OK (n2, (tenv_body, body, t1)) ->
           let tenv s =
             remove tenv_body var; (* remove scoped var *)
             join @@ apply_to_env2 s [tenv_body; tenv_exp] in
           (match lookup tenv_body var with
            | None -> (* let var not used in body *)
              (match mgu @@ compat [tenv_body; tenv_exp] with
-              | UOk s -> OK (n2, apply_to_tj s (tenv s, e, t1))
+              | UOk s -> OK (n2, apply_to_tj s (tenv s, Let (var, exp, body), t1))
               | UError (t1, t2) -> report t1 t2)
            | Some exp_type_body -> (* let var used *)
              (match mgu @@ (exp_type_body, exp_type_inferred) :: compat [tenv_body; tenv_exp] with
-              | UOk s -> OK (n2, apply_to_tj s (tenv s, e, t1))
+              | UOk s -> OK (n2, apply_to_tj s (tenv s, Let (var, exp, body), t1))
               | UError (t1, t2) -> report t1 t2))
         | err -> err)
      | err -> err)
@@ -141,42 +141,43 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
   | BeginEnd exprs ->
     let acc = List.fold_left (fun acc expr ->
         match acc with
-        | OK (tenvs, n_prev, typ_prev) ->
+        | OK (tenvs, n_prev, exprs, typ_prev) ->
           (match infer' expr n_prev with
-           | OK (n_new, (tenv, _, typ)) -> OK (tenv :: tenvs, n_new, typ)
+           | OK (n_new, (tenv, expr, typ)) -> OK (tenv :: tenvs, n_new, expr :: exprs, typ)
            | Error s -> Error s)
         | err -> err
-      ) (OK ([], n, UnitType)) exprs in
+      ) (OK ([], n, [], UnitType)) exprs in
     (match acc with
-     | OK (tenvs, n_last, typ) ->
+     | OK (tenvs, n_last, exprs, typ) ->
        (match mgu (compat tenvs) with
-        | UOk s -> OK (n_last, apply_to_tj s (join @@ apply_to_env2 s tenvs, e, typ))
+        | UOk s -> OK (n_last, apply_to_tj s (join @@ apply_to_env2 s tenvs, BeginEnd exprs, typ))
         | UError (t1, t2) -> report t1 t2)
      | Error s -> Error s)
 
   | NewRef contents ->
     (match infer' contents n with
-     | OK (n1, (tenv, _, contents_type)) -> OK (n1, (tenv, e, RefType (contents_type)))
+     | OK (n1, (tenv, contents, contents_type)) ->
+       OK (n1, (tenv, NewRef contents, RefType (contents_type)))
      | err -> err)
 
   | SetRef (ref, value) ->
     (match infer' ref n with
-     | OK (n1, (tenv_ref, _, ref_type)) ->
+     | OK (n1, (tenv_ref, ref, ref_type)) ->
        (match infer' value n1 with
-        | OK (n2, (tenv_val, _, val_type)) ->
+        | OK (n2, (tenv_val, value, val_type)) ->
           let contents = VarType ("v"^(string_of_int n2)) in
           (match mgu @@ (ref_type, RefType (contents)) :: (val_type, contents) :: (compat [tenv_ref;tenv_val]) with
-           | UOk s -> OK (n2+1, apply_to_tj s (join @@ apply_to_env2 s [tenv_ref;tenv_val], e, UnitType))
+           | UOk s -> OK (n2+1, apply_to_tj s (join @@ apply_to_env2 s [tenv_ref;tenv_val], SetRef (ref, value), UnitType))
            | UError (a, b) -> report a b)
         | err -> err)
      | err -> err)
 
   | DeRef (ref) ->
     (match infer' ref n with
-     | OK (n1, (tenv, _, ref_type)) ->
+     | OK (n1, (tenv, ref, ref_type)) ->
        let contents = VarType ("v"^(string_of_int n1)) in
        (match mgu [(ref_type, RefType (contents))] with
-        | UOk s -> OK (n1+1, apply_to_tj s (tenv, e, contents))
+        | UOk s -> OK (n1+1, apply_to_tj s (tenv, DeRef (ref), contents))
         | UError (a, b) -> report a b)
      | err -> err)
 
