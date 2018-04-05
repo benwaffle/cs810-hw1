@@ -95,7 +95,7 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
 
   | Proc (arg, argtype, body) ->
     (match infer' body n with
-     | OK (n1, (s1, _, t1)) ->
+     | OK (n1, (s1, body, t1)) ->
        let arg_t = (match lookup s1 arg with
            | None -> VarType arg
            | Some t -> t) in
@@ -113,7 +113,8 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
            (* TODO: use fresh type variable *)
            | None -> VarType arg (* arg not used in body, make a VarType *)
            | Some t -> t) in (* arg used in body, get inferred type  *)
-       let proc_typed = apply_to_expr (let ht = create () in extend ht arg arg_t; ht) @@ ProcUntyped(arg, e1) in (* convert ProcUntyped to Proc *)
+       let proc_typed =
+         apply_to_expr (let ht = create () in extend ht arg arg_t; ht) @@ ProcUntyped(arg, e1) in (* convert ProcUntyped to Proc *)
        remove s1 arg; (* remove argument type from env because it's scoped *)
        OK (n1, (s1, proc_typed, FuncType (arg_t, t1)))
      | err -> err)
