@@ -123,16 +123,18 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
      | OK (n1, (tenv_exp, exp, exp_type_inferred)) ->
        (match infer' body n1 with
         | OK (n2, (tenv_body, body, t1)) ->
+          let tenv_exp' = Hashtbl.copy tenv_exp in
+          remove tenv_exp' var;
           let tenv s =
             remove tenv_body var; (* remove scoped var *)
             join @@ apply_to_env2 s [tenv_body; tenv_exp] in
           (match lookup tenv_body var with
            | None -> (* let var not used in body *)
-             (match mgu @@ compat [tenv_body; tenv_exp] with
+             (match mgu @@ compat [tenv_body; tenv_exp'] with
               | UOk s -> OK (n2, apply_to_tj s (tenv s, Let (var, exp, body), t1))
               | UError (t1, t2) -> report t1 t2)
            | Some exp_type_body -> (* let var used *)
-             (match mgu @@ (exp_type_body, exp_type_inferred) :: compat [tenv_body; tenv_exp] with
+             (match mgu @@ (exp_type_body, exp_type_inferred) :: compat [tenv_body; tenv_exp'] with
               | UOk s -> OK (n2, apply_to_tj s (tenv s, Let (var, exp, body), t1))
               | UError (t1, t2) -> report t1 t2))
         | err -> err)

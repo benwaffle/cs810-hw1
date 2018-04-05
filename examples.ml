@@ -55,13 +55,8 @@ let false = zero?(1) in
 let true = zero?(0) in
 letrec bad (x: int): bool->bool = if zero?(x) then proc(x) {x} else proc(y) {y}
 in ((bad 7) false)"
-  | 31 -> "
-let false = zero?(1) in
-let true = zero?(0) in
-letrec bad (x: int): bool->bool = if zero?(x) then proc(x) {x} else proc(y) {y}
-in ((bad 7) false)"
-  | 32 -> "proc(x: unit) { (proc(y){y} zero?(1+(proc(x){x} 3))) }"
-  | 33 -> "let x = zero?(x) in (proc(x){x-1} if x then 1 else 2)"
-  | 34 -> "newref((proc(x){x} 3))"
-  | 35 -> "begin (proc(x){x} 3) end"
+  | 31 -> "proc(x: unit) { (proc(y){y} zero?(1+(proc(x){x} 3))) }"
+  | 32 -> "let x = zero?(x) in if x then 1 else 2"
+  | 33 -> "newref((proc(x){x} 3))"
+  | 34 -> "begin (proc(x){x} 3) end"
   | n -> failwith @@ "Expression " ^string_of_int  n ^ " is not defined"
