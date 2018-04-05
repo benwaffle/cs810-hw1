@@ -47,7 +47,7 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
      | OK (n1, (s1, e1, t1)) ->
        (match infer' e2 n1 with
         | OK (n2, (s2, e2, t2)) ->
-          (match mgu @@ List.append [(t1, IntType);(t2, IntType)] (compat [s1;s2]) with
+          (match mgu @@ (t1, IntType) :: (t2, IntType) :: (compat [s1;s2]) with
            | UOk s -> OK (n2, apply_to_tj s (join @@ apply_to_env2 s [s1;s2], ctor e1 e2, IntType))
            | UError (t1, t2) -> report t1 t2)
         | err -> err)
@@ -128,15 +128,12 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
           let tenv s =
             remove tenv_body var; (* remove scoped var *)
             join @@ apply_to_env2 s [tenv_body; tenv_exp] in
-          (match lookup tenv_body var with
-           | None -> (* let var not used in body *)
-             (match mgu @@ compat [tenv_body; tenv_exp'] with
-              | UOk s -> OK (n2, apply_to_tj s (tenv s, Let (var, exp, body), t1))
-              | UError (t1, t2) -> report t1 t2)
-           | Some exp_type_body -> (* let var used *)
-             (match mgu @@ (exp_type_body, exp_type_inferred) :: compat [tenv_body; tenv_exp'] with
-              | UOk s -> OK (n2, apply_to_tj s (tenv s, Let (var, exp, body), t1))
-              | UError (t1, t2) -> report t1 t2))
+          let pairs = (match lookup tenv_body var with
+              | None -> []
+              | Some exp_type_body -> [(exp_type_body, exp_type_inferred)]) in
+          (match mgu @@ pairs @ compat [tenv_body; tenv_exp'] with
+           | UOk s -> OK (n2, apply_to_tj s (tenv s, Let (var, exp, body), t1))
+           | UError (t1, t2) -> report t1 t2)
         | err -> err)
      | err -> err)
 
@@ -192,17 +189,16 @@ let rec infer' (e:expr) (n:int): (int*typing_judgement) error =
               | None -> VarType ("v"^(string_of_int n2))
               | Some t -> t) in
           let pairs =
-            List.concat [
-              (match lookup tenv_func_body func with
-               | None -> [] (* not called recursively *)
-               | Some func_type -> [func_type, FuncType (arg_t, ret_t)])
-              ;
-              (match lookup tenv_in_body func with
-               | None -> []
-               | Some func_type -> [func_type, FuncType (arg_t, ret_t)])
-              ;
-              compat [tenv_func_body; tenv_in_body]
-            ] in
+            (match lookup tenv_func_body func with
+             | None -> [] (* not called recursively *)
+             | Some func_type -> [func_type, FuncType (arg_t, ret_t)])
+            @
+            (match lookup tenv_in_body func with
+             | None -> []
+             | Some func_type -> [func_type, FuncType (arg_t, ret_t)])
+            @
+            compat [tenv_func_body; tenv_in_body]
+          in
           let letrec_typed = apply_to_expr
               (let ht = create () in
                extend ht func @@ FuncType (arg_t, ret_t);
